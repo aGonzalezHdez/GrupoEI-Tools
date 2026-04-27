@@ -7,5 +7,7 @@ public interface IUsersUseCase
     Task<OperationResult> DuplicaVentanaUsuario(string? usuarioOrigen, string? usuarioDestino, CancellationToken ct);
     Task<OperationResult> ResetPassword(string? user, CancellationToken ct);
     Task<OperationResult> ActualizaPuesto(string? user, CancellationToken ct);
+    Task<OperationResult> AgregregaPantallaMasivo(IEnumerable<string>? users,IEnumerable<int> pantallas,CancellationToken ct);
+    Task<OperationResult> DeshabilitarUsuario(IEnumerable<string> usuarios, string motivoBaja,string usuarioBaja, CancellationToken ct);
 
 }

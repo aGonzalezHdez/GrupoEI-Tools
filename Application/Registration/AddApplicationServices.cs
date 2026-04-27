@@ -25,6 +25,7 @@ public static class AddApplicationServices
         services.AddTransient<IResetPasswordUseCase, ResetPasswordUseCase>();
         services.AddTransient<IDuplicaVentanaUsuarioUseCase, DuplicaVentanaUsuarioUseCase>();
         services.AddTransient<IActualizaPuestoUseCase, ActualizaPuestoUseCase>();
+        services.AddTransient<IBajaUsuarioUseCase, BajaUsuarioUseCase>();
         
         //-----Extras---------
         services.Configure<SecurityOptions>(configuration.GetSection("Security"));

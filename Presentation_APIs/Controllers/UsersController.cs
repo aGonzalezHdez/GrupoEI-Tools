@@ -44,5 +44,17 @@ public class UsersController : ControllerBase
         return result.Success ? Ok(result.Message) : StatusCode(StatusCodes.Status500InternalServerError,new { mensaje = result.Message});
     }
     
+    [HttpPost("/AgregaPantallaMasivo")]
+    public async Task<IActionResult> AgregregaPantallaMasivo([FromBody] AgregaPantallaMasivoRequest request, CancellationToken ct)
+    {
+        var result = await _usersUseCase.AgregregaPantallaMasivo(request.ListaUsuarios,request.ListaPantallas, ct);
+        return result.Success ? Ok(result.Message) : StatusCode(StatusCodes.Status500InternalServerError,new { mensaje = result.Message});
+    }
     
+    [HttpPost("/BajaUsuario")]
+    public async Task<IActionResult> BajaUsuario([FromBody] BajaUsuarioRequest request, CancellationToken ct)
+    {
+        var result = await _usersUseCase.DeshabilitarUsuario(request.ListaUsuarios,request.MotivoBaja,request.UsuarioBaja, ct);
+        return result.Success ? Ok(result.Message) : StatusCode(StatusCodes.Status500InternalServerError,new { mensaje = result.Message});
+    }
 }

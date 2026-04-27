@@ -20,4 +20,10 @@ public class DuplicaVentanaUsuarioUseCase : IDuplicaVentanaUsuarioUseCase
     {
         return await _usersRepository.DuplicaVentanaUsuarios(usuarioOrigen, usuarioDestino, ct);
     }
+
+    public async Task<OperationResult> AgregregaPantallaMasivo(IEnumerable<string>? users, IEnumerable<int>? pantallas, CancellationToken ct)
+    {
+        
+        return await _usersRepository.AgregregaPantallaMasivo(users, pantallas, ct);
+    }
 }

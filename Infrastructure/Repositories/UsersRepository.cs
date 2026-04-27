@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using Application.Interfaces.Repositories;
 using Infrastructure.Interfaces;
 using Infrastructure.SQLServer;
@@ -150,5 +151,169 @@ public class UsersRepository : IUsersRepository
             throw;
         }
         return result;
+    }
+
+    public async Task<OperationResult> AgregregaPantallaMasivo(IEnumerable<string> usuarios, IEnumerable<int> pantallas, CancellationToken ct)
+    {
+        var result = new OperationResult();
+
+        const string sqlGetUser = @"SELECT IdUsuario
+                                    FROM CATALOGODEUSUARIOS
+                                    WHERE Usuario = @Usuario";
+
+        const string sqlInsert = @"INSERT INTO PANTALLASYREPORTESPORUSUARIO
+                                   (IdUsuario, IdPantalla, NivelDeAcceso)
+                                   VALUES (@IdUsuario, @IdPantalla, @NivelDeAcceso)";
+
+        await using var conn = _factory.Create();
+        await conn.OpenAsync(ct);
+
+        await using var transaction = await conn.BeginTransactionAsync(ct);
+
+        try
+        {
+            foreach (var usuario in usuarios)
+            {
+                int? idUsuario = null;
+
+                await using (DbCommand cmdUser = conn.CreateCommand())
+                {
+                    cmdUser.Transaction = transaction;
+                    cmdUser.CommandText = sqlGetUser;
+                    cmdUser.CommandType = CommandType.Text;
+                    cmdUser.CommandTimeout = _timeout;
+
+                    cmdUser.Parameters.Add(new SqlParameter("@Usuario", SqlDbType.VarChar, 50)
+                    {
+                        Value = usuario
+                    });
+
+                    var value = await cmdUser.ExecuteScalarAsync(ct);
+
+                    if (value != null && value != DBNull.Value)
+                        idUsuario = Convert.ToInt32(value);
+                }
+
+                if (!idUsuario.HasValue)
+                    continue;
+
+                foreach (var pantalla in pantallas)
+                {
+                    await using DbCommand cmdInsert = conn.CreateCommand();
+
+                    cmdInsert.Transaction = transaction;
+                    cmdInsert.CommandText = sqlInsert;
+                    cmdInsert.CommandType = CommandType.Text;
+                    cmdInsert.CommandTimeout = _timeout;
+
+                    cmdInsert.Parameters.Add(new SqlParameter("@IdUsuario", SqlDbType.Int)
+                    {
+                        Value = idUsuario.Value
+                    });
+
+                    cmdInsert.Parameters.Add(new SqlParameter("@IdPantalla", SqlDbType.Int)
+                    {
+                        Value = pantalla
+                    });
+
+                    cmdInsert.Parameters.Add(new SqlParameter("@NivelDeAcceso", SqlDbType.Int)
+                    {
+                        Value = 4
+                    });
+
+                    await cmdInsert.ExecuteNonQueryAsync(ct);
+                }
+            }
+
+            await transaction.CommitAsync(ct);
+            result.Success = true;
+            return result;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            result.Success = false;
+            result.Message = ex.Message;
+            return result;
+        }
+    }
+
+    public async Task<OperationResult> DeshabilitarUsuario(IEnumerable<string> usuarios,string motivoBaja,string usuarioBaja, CancellationToken ct)
+    {
+        var result = new OperationResult();
+        const string sqlGetUser = @"SELECT IdUsuario
+                                    FROM CATALOGODEUSUARIOS
+                                    WHERE Usuario = @UsuarioBaja";
+        
+        const string sqlUpdate = @"
+                            UPDATE CATALOGODEUSUARIOS
+                            SET
+                                UsuarioActivo = 0,
+                                UsuarioBaja = @UsuarioBaja,
+                                FechaUsuarioBaja = GETDATE(),
+                                MotivoBaja = @MotivoBaja
+                            WHERE Usuario = @Usuario;"; 
+        await using var conn = _factory.Create();
+        await conn.OpenAsync(ct);
+        await using var transaction = await conn.BeginTransactionAsync(ct);
+        try
+        {
+            int? idUsuarioBaja = null;
+
+            await using (DbCommand cmdUser = conn.CreateCommand())
+            {
+                cmdUser.Transaction = transaction;
+                cmdUser.CommandText = sqlGetUser;
+                cmdUser.CommandType = CommandType.Text;
+                cmdUser.CommandTimeout = _timeout;
+
+                cmdUser.Parameters.Add(new SqlParameter("@UsuarioBaja", SqlDbType.VarChar, 50)
+                {
+                    Value = usuarioBaja
+                });
+
+                var value = await cmdUser.ExecuteScalarAsync(ct);
+
+                if (value != null && value != DBNull.Value)
+                    idUsuarioBaja = Convert.ToInt32(value);
+            }
+            
+            foreach (var usuario in usuarios)
+            {
+                await using DbCommand cmdInsert = conn.CreateCommand();
+                
+                cmdInsert.Transaction = transaction;
+                cmdInsert.CommandText = sqlUpdate;
+                cmdInsert.CommandType = CommandType.Text;
+                cmdInsert.CommandTimeout = _timeout;
+                
+                cmdInsert.Parameters.Add(new SqlParameter("@Usuario", SqlDbType.VarChar, 250)
+                {
+                    Value = usuario
+                });
+                
+                cmdInsert.Parameters.Add(new SqlParameter("@UsuarioBaja", SqlDbType.Int)
+                {
+                    Value = idUsuarioBaja
+                });
+                
+                cmdInsert.Parameters.Add(new SqlParameter("@MotivoBaja", SqlDbType.VarChar, 250)
+                {
+                    Value = motivoBaja
+                });
+                await cmdInsert.ExecuteNonQueryAsync(ct);
+            }
+            await transaction.CommitAsync(ct);
+            result.Success = true;
+            result.Message = "Proceso de update terminado";
+            return result;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(ct);
+            result.Success = false;
+            result.Message = ex.Message;
+            return result;
+        }
     }
 }
