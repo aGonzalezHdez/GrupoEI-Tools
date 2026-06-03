@@ -3,5 +3,5 @@
 public class AgregaPantallaMasivoRequest
 {
     public IEnumerable<string> ListaUsuarios { get; set; } 
-    public IEnumerable<int> ListaPantallas { get; set; }
+    public IEnumerable<int> ListaIdPantallas { get; set; }
 }

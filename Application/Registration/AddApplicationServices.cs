@@ -19,6 +19,7 @@ public static class AddApplicationServices
         //-----Reporting------
         services.AddTransient<IReportingUseCase, ReportingUseCase>();
         services.AddTransient<IVerificacionComprobanteFiscalUseCase, VerificacionComprobanteFiscalUseCase>();
+        services.AddTransient<ICargarControlUseCase, CargarControlUseCase>();
         
         //-----Users----------
         services.AddTransient<IUsersUseCase, UsersUseCase>();

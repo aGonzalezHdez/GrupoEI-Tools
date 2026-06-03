@@ -12,5 +12,6 @@ public static class StoredProcedures
     {
         public const string DuplicaVentanaUsuario = "dbo.NET_DUPLICA_USUARIO";
         public const string ActualizaPuesto = "Perfiles.NET_ACTUALIZAR_PUESTO";
+        public const string InsertarBitacoraPassword = "NET_INSERT_CASAEI_BITACORACAMBIOPASSWORD";
     }
 }

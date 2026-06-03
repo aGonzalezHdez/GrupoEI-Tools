@@ -47,7 +47,7 @@ public class UsersController : ControllerBase
     [HttpPost("/AgregaPantallaMasivo")]
     public async Task<IActionResult> AgregregaPantallaMasivo([FromBody] AgregaPantallaMasivoRequest request, CancellationToken ct)
     {
-        var result = await _usersUseCase.AgregregaPantallaMasivo(request.ListaUsuarios,request.ListaPantallas, ct);
+        var result = await _usersUseCase.AgregregaPantallaMasivo(request.ListaUsuarios,request.ListaIdPantallas, ct);
         return result.Success ? Ok(result.Message) : StatusCode(StatusCodes.Status500InternalServerError,new { mensaje = result.Message});
     }
     

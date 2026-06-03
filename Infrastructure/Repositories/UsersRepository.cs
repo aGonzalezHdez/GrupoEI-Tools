@@ -49,7 +49,12 @@ public class UsersRepository : IUsersRepository
         {
             var rowsAffected = await cmd.ExecuteNonQueryAsync(ct);
             result.Success = true;
-            result.Message = "Se ha reseteado correctamente el password";
+            result.Message = $"Se ha reseteado correctamente el password: {rowsAffected} afectados";
+            if (result.Success)
+            {
+                result = await AgregarBitacora(user,ct);
+            }
+                
         }
         catch (SqlException ex)
         {
@@ -142,7 +147,7 @@ public class UsersRepository : IUsersRepository
         }
         catch (SqlException e)
         {
-            result.Success = true;
+            result.Success = false;
             result.Message = e.Message;
         }
         catch (Exception e)
@@ -316,4 +321,116 @@ public class UsersRepository : IUsersRepository
             return result;
         }
     }
+    
+    
+    private async Task<OperationResult> AgregarBitacora(string user,CancellationToken ct)
+    {
+        await using var conn = _factory.Create();
+        await conn.OpenAsync(ct);
+        await using var cmd = new SqlCommand(StoredProcedures.Usuarios.InsertarBitacoraPassword, conn)
+        {
+            CommandType = CommandType.StoredProcedure,
+            CommandTimeout = _timeout
+        };
+        var usuarioId = await ObtenerIdUsuario(conn,user, ct);
+        cmd.Parameters.Add("@IdUsuario", SqlDbType.Int).Value = usuarioId;
+        cmd.Parameters.Add("@IdUsuarioModifica", SqlDbType.Int).Value = 8974;//11138502189 Abraham Gonzalez
+        cmd.Parameters.Add("@Fecha", SqlDbType.DateTime).Value = DateTime.UtcNow;
+        var newIdRegistroParam = new SqlParameter("@newid_registro", SqlDbType.Int)
+        {
+            Direction = ParameterDirection.Output
+        };
+        cmd.Parameters.Add(newIdRegistroParam);
+
+        var result = new OperationResult();
+        try
+        {
+            await cmd.ExecuteNonQueryAsync(ct);
+            var newIdRegistro = newIdRegistroParam.Value as int?;
+            result.Success = true;
+            result.Message = $"Cambio de contraseña satisfactoria. Id: {newIdRegistro}";
+        }
+        catch (SqlException e)
+        {
+            result.Success = false;
+            result.Message = e.Message;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        return result;
+    }
+
+    private async Task<bool> BajaUsuarioDetalle(string usuario, DateTime baja)
+    {
+        const string sql = @"
+        DECLARE @IdUsuario INT;
+        DECLARE @UsuarioCASA VARCHAR(50);
+
+        SELECT 
+            @IdUsuario = IdUsuario,
+            @UsuarioCASA = UsuarioCASA
+        FROM CATALOGODEUSUARIOS
+        WHERE Usuario = @Usuario;
+
+        IF @IdUsuario IS NULL
+        BEGIN
+            THROW 50001, 'No se encontró el usuario.', 1;
+        END;
+
+        DELETE FROM USUARIOSDISPONIBLES
+        WHERE IdUsuario = @IdUsuario;
+
+        UPDATE CASA.dbo.SISSEG_USUARI
+        SET FEC_BAJA = @Baja
+        WHERE [LOGIN] = @UsuarioCASA;
+
+        DELETE FROM MIEMBROSDEGRUPO
+        WHERE IdUsuario = @IdUsuario;
+
+        DELETE FROM PANTALLASYREPORTESPORUSUARIO
+        WHERE IdUsuario = @IdUsuario;
+
+        DELETE FROM PERMISOSYREPORTESPORUSUARIO
+        WHERE IdUsuario = @IdUsuario;
+
+        DELETE FROM PARAMETROSESPREPORTESPORUSUARIO
+        WHERE IdUsuario = @IdUsuario;
+
+        DELETE FROM CATALOGODEDEPARTAMENTOSACARGO
+        WHERE IdUsuario = @IdUsuario;
+    ";
+
+        await using var conn = _factory.Create();
+        await conn.OpenAsync();
+
+        await using var transaction = await conn.BeginTransactionAsync();
+
+        try
+        {
+            await using var cmd = new SqlCommand(sql, conn, (SqlTransaction)transaction)
+            {
+                CommandType = CommandType.Text,
+                CommandTimeout = _timeout
+            };
+
+            cmd.Parameters.Add("@Usuario", SqlDbType.VarChar, 50).Value = usuario;
+            cmd.Parameters.Add("@Baja", SqlDbType.DateTime2).Value = baja;
+
+            await cmd.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+
 }

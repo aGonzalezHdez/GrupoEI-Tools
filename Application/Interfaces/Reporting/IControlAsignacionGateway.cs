@@ -2,8 +2,7 @@ using Application.DTOs.Reporting;
 
 namespace Application.Interfaces.Reporting;
 
-public interface IReportingUseCase
+public interface IControlAsignacionGateway
 {
-    Task VerificacionCfdiAsync(string? uuid, CancellationToken ct);
     Task<CargarControlResultado> CargarControlAsync(CargarControlRequest request, CancellationToken ct);
 }
